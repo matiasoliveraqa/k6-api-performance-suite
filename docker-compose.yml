@@ -1,0 +1,29 @@
+services:
+  mock-api:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: node src/mock/server.js
+    ports:
+      - "3333:3333"
+
+  k6-smoke:
+    build: .
+    volumes:
+      - ./reports:/app/reports
+    environment:
+      - BASE_URL=http://mock-api:3333
+    command: run tests/smoke-test.js
+    depends_on:
+      - mock-api
+
+  k6-load:
+    build: .
+    volumes:
+      - ./reports:/app/reports
+    environment:
+      - BASE_URL=http://mock-api:3333
+    command: run tests/load-test.js
+    depends_on:
+      - mock-api

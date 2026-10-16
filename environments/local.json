@@ -1,0 +1,7 @@
+{
+  "id": "e4569e21-local",
+  "name": "Local Mock Environment",
+  "values": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:3333", "enabled": true }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "e4569e22-staging",
+  "name": "Staging Environment",
+  "values": [
+    { "key": "baseUrl", "value": "https://dummyjson.com", "enabled": true }
+  ]
+}

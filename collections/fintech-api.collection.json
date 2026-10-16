@@ -1,0 +1,207 @@
+{
+  "info": {
+    "_postman_id": "c621815e-8551-4e78-bc48-0d32bb646f90",
+    "name": "Fintech Core API & Payments Automation Suite",
+    "description": "Automated regression suite testing health, authentication, ledger queries, and transfer idempotency.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01. Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is within SLA (< 200ms)\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(200);",
+              "});",
+              "pm.test(\"Service status is ok\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql(\"ok\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02. Obtain Auth Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Returns valid accessToken\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.accessToken).to.be.a('string');",
+              "    pm.collectionVariables.set(\"authToken\", jsonData.accessToken);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clientId\": \"fintech-service\",\n  \"clientSecret\": \"super-secret-key\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/token",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "token"]
+        }
+      }
+    },
+    {
+      "name": "03. Get Account Balance",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Account balance is positive number\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.balance).to.be.above(0);",
+              "    pm.collectionVariables.set(\"initialBalance\", jsonData.balance);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{authToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/acc_prod_001/balance",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "accounts", "acc_prod_001", "balance"]
+        }
+      }
+    },
+    {
+      "name": "04. Submit Financial Transfer (Initial)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var key = 'idemp_' + Math.floor(Math.random() * 1000000);",
+              "pm.collectionVariables.set(\"idempotencyKey\", key);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Transfer created (201 Created)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"Response marked as cache MISS\", function () {",
+              "    pm.expect(pm.response.headers.get('X-Idempotent-Replay')).to.eql('false');",
+              "});",
+              "pm.test(\"Transaction ID generated\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.transactionId).to.be.a('string');",
+              "    pm.collectionVariables.set(\"createdTxnId\", jsonData.transactionId);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{authToken}}" },
+          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sourceAccountId\": \"acc_prod_001\",\n  \"destinationAccountId\": \"acc_prod_002\",\n  \"amount\": 150.00,\n  \"currency\": \"USD\",\n  \"reference\": \"Automated API Test\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transfers",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transfers"]
+        }
+      }
+    },
+    {
+      "name": "05. Idempotent Transfer Replay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Idempotent replay accepted (201 Created from cache)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"Header confirms idempotent replay\", function () {",
+              "    pm.expect(pm.response.headers.get('X-Idempotent-Replay')).to.eql('true');",
+              "});",
+              "pm.test(\"Returns exact same transaction ID (No double debit)\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.transactionId).to.eql(pm.collectionVariables.get(\"createdTxnId\"));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{authToken}}" },
+          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sourceAccountId\": \"acc_prod_001\",\n  \"destinationAccountId\": \"acc_prod_002\",\n  \"amount\": 150.00,\n  \"currency\": \"USD\",\n  \"reference\": \"Automated API Test\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transfers",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transfers"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:3333" },
+    { "key": "authToken", "value": "" },
+    { "key": "idempotencyKey", "value": "" },
+    { "key": "createdTxnId", "value": "" }
+  ]
+}
