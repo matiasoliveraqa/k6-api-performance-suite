@@ -1,7 +1,49 @@
 {
-  "id": "e4569e22-staging",
+  "id": "e8e63080-87a2-4752-a7d1-e5d8ff21d1d9",
   "name": "Staging Environment",
   "values": [
-    { "key": "baseUrl", "value": "https://dummyjson.com", "enabled": true }
-  ]
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3333",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "clientId",
+      "value": "fintech-service",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "clientSecret",
+      "value": "super-secret-key",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "accountId",
+      "value": "acc_prod_001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "targetAccountId",
+      "value": "acc_prod_002",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "currency",
+      "value": "USD",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
 }

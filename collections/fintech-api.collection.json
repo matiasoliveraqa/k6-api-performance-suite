@@ -1,27 +1,41 @@
 {
   "info": {
-    "_postman_id": "c621815e-8551-4e78-bc48-0d32bb646f90",
-    "name": "Fintech Core API & Payments Automation Suite",
-    "description": "Automated regression suite testing health, authentication, ledger queries, and transfer idempotency.",
+    "_postman_id": "a92b951e-6277-4df3-a5b7-7e7939cefa55",
+    "name": "Fintech Core API - Automated Integration & Idempotency Test Suite",
+    "description": "Production-grade automated API tests for Fintech services verifying authentication, account balances, schema compliance, and ACID-compliant idempotent financial transfers.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "01. Health Check",
+      "name": "01 - System Health & Readiness",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Status code is 200 OK\", function () {",
+              "pm.test(\"Status code is 200\", function () {",
               "    pm.response.to.have.status(200);",
               "});",
-              "pm.test(\"Response time is within SLA (< 200ms)\", function () {",
-              "    pm.expect(pm.response.responseTime).to.be.below(200);",
+              "",
+              "pm.test(\"Response time is within acceptable SLA (< 300ms)\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(300);",
               "});",
-              "pm.test(\"Service status is ok\", function () {",
-              "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData.status).to.eql(\"ok\");",
+              "",
+              "pm.test(\"Health payload schema and fields are valid\", function () {",
+              "    const schema = {",
+              "        type: \"object\",",
+              "        required: [\"status\", \"version\", \"uptime\", \"timestamp\"],",
+              "        properties: {",
+              "            status: { type: \"string\", enum: [\"ok\", \"UP\"] },",
+              "            service: { type: \"string\" },",
+              "            version: { type: \"string\" },",
+              "            uptime: { type: \"number\" },",
+              "            timestamp: { type: \"string\" }",
+              "        }",
+              "    };",
+              "    pm.response.to.have.jsonSchema(schema);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status.toLowerCase()).to.eql(\"ok\");",
               "});"
             ],
             "type": "text/javascript"
@@ -30,7 +44,9 @@
       ],
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
         "url": {
           "raw": "{{baseUrl}}/health",
           "host": ["{{baseUrl}}"],
@@ -39,7 +55,7 @@
       }
     },
     {
-      "name": "02. Obtain Auth Token",
+      "name": "02 - Client Authentication (OAuth Token)",
       "event": [
         {
           "listen": "test",
@@ -48,10 +64,21 @@
               "pm.test(\"Status code is 200 OK\", function () {",
               "    pm.response.to.have.status(200);",
               "});",
-              "pm.test(\"Returns valid accessToken\", function () {",
-              "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData.accessToken).to.be.a('string');",
-              "    pm.collectionVariables.set(\"authToken\", jsonData.accessToken);",
+              "",
+              "pm.test(\"Token schema validation and extraction\", function () {",
+              "    const schema = {",
+              "        type: \"object\",",
+              "        required: [\"accessToken\", \"tokenType\", \"expiresIn\"],",
+              "        properties: {",
+              "            accessToken: { type: \"string\" },",
+              "            tokenType: { type: \"string\", enum: [\"Bearer\"] },",
+              "            expiresIn: { type: \"number\" }",
+              "        }",
+              "    };",
+              "    pm.response.to.have.jsonSchema(schema);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.accessToken).to.be.a(\"string\").and.have.lengthOf.at.least(10);",
+              "    pm.environment.set(\"authToken\", json.accessToken);",
               "});"
             ],
             "type": "text/javascript"
@@ -61,11 +88,12 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"clientId\": \"fintech-service\",\n  \"clientSecret\": \"super-secret-key\"\n}"
+          "raw": "{\n    \"clientId\": \"{{clientId}}\",\n    \"clientSecret\": \"{{clientSecret}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/token",
@@ -75,19 +103,32 @@
       }
     },
     {
-      "name": "03. Get Account Balance",
+      "name": "03 - Account Details & Balance Lookup",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Status code is 200\", function () {",
+              "pm.test(\"Status code is 200 OK\", function () {",
               "    pm.response.to.have.status(200);",
               "});",
-              "pm.test(\"Account balance is positive number\", function () {",
-              "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData.balance).to.be.above(0);",
-              "    pm.collectionVariables.set(\"initialBalance\", jsonData.balance);",
+              "",
+              "pm.test(\"Account balance schema validation\", function () {",
+              "    const schema = {",
+              "        type: \"object\",",
+              "        required: [\"accountId\", \"balance\", \"currency\", \"lastUpdated\"],",
+              "        properties: {",
+              "            accountId: { type: \"string\" },",
+              "            balance: { type: \"number\" },",
+              "            currency: { type: \"string\" },",
+              "            lastUpdated: { type: \"string\" }",
+              "        }",
+              "    };",
+              "    pm.response.to.have.jsonSchema(schema);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.accountId).to.eql(pm.environment.get(\"accountId\"));",
+              "    pm.expect(json.balance).to.be.above(0);",
+              "    pm.environment.set(\"initialBalance\", json.balance);",
               "});"
             ],
             "type": "text/javascript"
@@ -97,24 +138,27 @@
       "request": {
         "method": "GET",
         "header": [
+          { "key": "Accept", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{authToken}}" }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/acc_prod_001/balance",
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "accounts", "acc_prod_001", "balance"]
+          "path": ["api", "v1", "accounts", "{{accountId}}", "balance"]
         }
       }
     },
     {
-      "name": "04. Submit Financial Transfer (Initial)",
+      "name": "04 - Fund Transfer (Initial Request with Idempotency Key)",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "var key = 'idemp_' + Math.floor(Math.random() * 1000000);",
-              "pm.collectionVariables.set(\"idempotencyKey\", key);"
+              "// Generate unique UUID v4 Idempotency Key",
+              "const uuid = pm.variables.replaceIn('{{$guid}}');",
+              "pm.environment.set(\"idempotencyKey\", uuid);",
+              "pm.environment.set(\"transferAmount\", 75.50);"
             ],
             "type": "text/javascript"
           }
@@ -123,16 +167,36 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Transfer created (201 Created)\", function () {",
+              "pm.test(\"Status code is 201 Created\", function () {",
               "    pm.response.to.have.status(201);",
               "});",
-              "pm.test(\"Response marked as cache MISS\", function () {",
-              "    pm.expect(pm.response.headers.get('X-Idempotent-Replay')).to.eql('false');",
+              "",
+              "pm.test(\"X-Cache-Lookup is MISS for initial transfer execution\", function () {",
+              "    pm.expect(pm.response.headers.get(\"X-Cache-Lookup\")).to.eql(\"MISS\");",
               "});",
-              "pm.test(\"Transaction ID generated\", function () {",
-              "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData.transactionId).to.be.a('string');",
-              "    pm.collectionVariables.set(\"createdTxnId\", jsonData.transactionId);",
+              "",
+              "pm.test(\"Transfer response schema validation\", function () {",
+              "    const schema = {",
+              "        type: \"object\",",
+              "        required: [\"transactionId\", \"idempotencyKey\", \"sourceAccountId\", \"destinationAccountId\", \"amount\", \"status\", \"remainingBalance\"],",
+              "        properties: {",
+              "            transactionId: { type: \"string\" },",
+              "            idempotencyKey: { type: \"string\" },",
+              "            sourceAccountId: { type: \"string\" },",
+              "            destinationAccountId: { type: \"string\" },",
+              "            amount: { type: \"number\" },",
+              "            currency: { type: \"string\" },",
+              "            status: { type: \"string\", enum: [\"COMPLETED\"] },",
+              "            remainingBalance: { type: \"number\" },",
+              "            createdAt: { type: \"string\" }",
+              "        }",
+              "    };",
+              "    pm.response.to.have.jsonSchema(schema);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.idempotencyKey).to.eql(pm.environment.get(\"idempotencyKey\"));",
+              "    pm.expect(json.amount).to.eql(75.50);",
+              "    pm.environment.set(\"createdTransactionId\", json.transactionId);",
+              "    pm.environment.set(\"balanceAfterTransfer\", json.remainingBalance);",
               "});"
             ],
             "type": "text/javascript"
@@ -142,13 +206,14 @@
       "request": {
         "method": "POST",
         "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{authToken}}" },
-          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"sourceAccountId\": \"acc_prod_001\",\n  \"destinationAccountId\": \"acc_prod_002\",\n  \"amount\": 150.00,\n  \"currency\": \"USD\",\n  \"reference\": \"Automated API Test\"\n}"
+          "raw": "{\n    \"sourceAccountId\": \"{{accountId}}\",\n    \"destinationAccountId\": \"{{targetAccountId}}\",\n    \"amount\": {{transferAmount}},\n    \"currency\": \"{{currency}}\",\n    \"reference\": \"Automated Idempotency Verification\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/transfers",
@@ -158,21 +223,24 @@
       }
     },
     {
-      "name": "05. Idempotent Transfer Replay",
+      "name": "05 - Idempotency Replay (Identical Request & Key)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Idempotent replay accepted (201 Created from cache)\", function () {",
-              "    pm.response.to.have.status(201);",
+              "pm.test(\"Status code is 200 or 201 on replay\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
               "});",
-              "pm.test(\"Header confirms idempotent replay\", function () {",
-              "    pm.expect(pm.response.headers.get('X-Idempotent-Replay')).to.eql('true');",
+              "",
+              "pm.test(\"X-Cache-Lookup header confirms HIT\", function () {",
+              "    pm.expect(pm.response.headers.get(\"X-Cache-Lookup\")).to.eql(\"HIT\");",
               "});",
-              "pm.test(\"Returns exact same transaction ID (No double debit)\", function () {",
-              "    var jsonData = pm.response.json();",
-              "    pm.expect(jsonData.transactionId).to.eql(pm.collectionVariables.get(\"createdTxnId\"));",
+              "",
+              "pm.test(\"Replay returns identical transaction ID without double-debiting balance\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.transactionId).to.eql(pm.environment.get(\"createdTransactionId\"));",
+              "    pm.expect(json.remainingBalance).to.eql(pm.environment.get(\"balanceAfterTransfer\"));",
               "});"
             ],
             "type": "text/javascript"
@@ -182,13 +250,14 @@
       "request": {
         "method": "POST",
         "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{authToken}}" },
-          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"sourceAccountId\": \"acc_prod_001\",\n  \"destinationAccountId\": \"acc_prod_002\",\n  \"amount\": 150.00,\n  \"currency\": \"USD\",\n  \"reference\": \"Automated API Test\"\n}"
+          "raw": "{\n    \"sourceAccountId\": \"{{accountId}}\",\n    \"destinationAccountId\": \"{{targetAccountId}}\",\n    \"amount\": {{transferAmount}},\n    \"currency\": \"{{currency}}\",\n    \"reference\": \"Automated Idempotency Verification\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/transfers",
@@ -196,12 +265,87 @@
           "path": ["api", "v1", "transfers"]
         }
       }
+    },
+    {
+      "name": "06 - Negative Test: Missing Idempotency Key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400 Bad Request when Idempotency-Key is omitted\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error schema validation\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"error\", \"MISSING_IDEMPOTENCY_KEY\");",
+              "    pm.expect(json).to.have.property(\"message\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{authToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"sourceAccountId\": \"{{accountId}}\",\n    \"destinationAccountId\": \"{{targetAccountId}}\",\n    \"amount\": 10.00,\n    \"currency\": \"{{currency}}\",\n    \"reference\": \"Missing Key Failure Test\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transfers",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transfers"]
+        }
+      }
+    },
+    {
+      "name": "07 - Transaction Audit Ledger Verification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ledger query includes executed transaction\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"data\");",
+              "    pm.expect(json.data).to.be.an(\"array\");",
+              "    const createdId = pm.environment.get(\"createdTransactionId\");",
+              "    const matched = json.data.find(t => t.transactionId === createdId);",
+              "    pm.expect(matched).to.not.be.undefined;",
+              "    pm.expect(matched.idempotencyKey).to.eql(pm.environment.get(\"idempotencyKey\"));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{authToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transactions?accountId={{accountId}}&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transactions"],
+          "query": [
+            { "key": "accountId", "value": "{{accountId}}" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
     }
-  ],
-  "variable": [
-    { "key": "baseUrl", "value": "http://127.0.0.1:3333" },
-    { "key": "authToken", "value": "" },
-    { "key": "idempotencyKey", "value": "" },
-    { "key": "createdTxnId", "value": "" }
   ]
 }

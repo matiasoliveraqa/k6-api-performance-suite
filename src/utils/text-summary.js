@@ -460,8 +460,4 @@ function generateJUnitXML(data, options) {
   )
 }
 
-exports.humanizeValue = humanizeValue
-exports.textSummary = generateTextSummary
-exports.jUnit = generateJUnitXML
-
-export { generateTextSummary as textSummary, generateJUnitXML as jUnit };
+export { humanizeValue, generateTextSummary as textSummary, generateJUnitXML as jUnit };

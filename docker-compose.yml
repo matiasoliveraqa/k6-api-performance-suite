@@ -1,29 +1,138 @@
 services:
+  # ----------------------------------------------------------------------------
+  # 1. High-Throughput Mock Fintech API Service
+  # ----------------------------------------------------------------------------
   mock-api:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: node src/mock/server.js
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fintech-mock-api
+    entrypoint: ["node", "src/mock/server.js"]
     ports:
       - "3333:3333"
+    environment:
+      - PORT=3333
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:3333/health || exit 1"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
+      start_period: 2s
+    networks:
+      - perf-net
 
+  # ----------------------------------------------------------------------------
+  # 2. k6 Smoke Test Runner (Baseline Health & SLA Verification)
+  # ----------------------------------------------------------------------------
   k6-smoke:
-    build: .
-    volumes:
-      - ./reports:/app/reports
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: k6-smoke-runner
+    depends_on:
+      mock-api:
+        condition: service_healthy
     environment:
       - BASE_URL=http://mock-api:3333
-    command: run tests/smoke-test.js
-    depends_on:
-      - mock-api
+      - TARGET_ENV=mock
+    command: ["run", "tests/smoke-test.js"]
+    volumes:
+      - ./reports:/app/reports
+    networks:
+      - perf-net
 
+  # ----------------------------------------------------------------------------
+  # 3. k6 Load Test Runner (Standard Production Load: 100-200 VUs)
+  # ----------------------------------------------------------------------------
   k6-load:
-    build: .
-    volumes:
-      - ./reports:/app/reports
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: k6-load-runner
+    depends_on:
+      mock-api:
+        condition: service_healthy
     environment:
       - BASE_URL=http://mock-api:3333
-    command: run tests/load-test.js
+      - TARGET_ENV=mock
+    command: ["run", "tests/load-test.js"]
+    volumes:
+      - ./reports:/app/reports
+    networks:
+      - perf-net
+
+  # ----------------------------------------------------------------------------
+  # 4. k6 Stress Test Runner (Pushing up to 500 VUs)
+  # ----------------------------------------------------------------------------
+  k6-stress:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: k6-stress-runner
     depends_on:
-      - mock-api
+      mock-api:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://mock-api:3333
+      - TARGET_ENV=mock
+    command: ["run", "tests/stress-test.js"]
+    volumes:
+      - ./reports:/app/reports
+    networks:
+      - perf-net
+
+  # ----------------------------------------------------------------------------
+  # 5. k6 Spike Test Runner (Instant Traffic Surge)
+  # ----------------------------------------------------------------------------
+  k6-spike:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: k6-spike-runner
+    depends_on:
+      mock-api:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://mock-api:3333
+      - TARGET_ENV=mock
+    command: ["run", "tests/spike-test.js"]
+    volumes:
+      - ./reports:/app/reports
+    networks:
+      - perf-net
+
+  # ----------------------------------------------------------------------------
+  # 6. Newman Postman Collection Automation Runner
+  # ----------------------------------------------------------------------------
+  newman:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: newman-api-runner
+    entrypoint: ["npx", "newman"]
+    depends_on:
+      mock-api:
+        condition: service_healthy
+    command:
+      - "run"
+      - "collections/fintech-api.collection.json"
+      - "--env-var"
+      - "baseUrl=http://mock-api:3333"
+      - "-e"
+      - "environments/local.json"
+      - "--reporters"
+      - "cli,json,htmlextra"
+      - "--reporter-json-export"
+      - "reports/newman-results.json"
+      - "--reporter-htmlextra-export"
+      - "reports/newman-report.html"
+    volumes:
+      - ./reports:/app/reports
+    networks:
+      - perf-net
+
+networks:
+  perf-net:
+    driver: bridge

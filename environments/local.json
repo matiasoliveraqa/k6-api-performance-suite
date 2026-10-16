@@ -1,7 +1,49 @@
 {
-  "id": "e4569e21-local",
+  "id": "c1a938b3-3df7-4b71-b0db-6eef001198c2",
   "name": "Local Mock Environment",
   "values": [
-    { "key": "baseUrl", "value": "http://127.0.0.1:3333", "enabled": true }
-  ]
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3333",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "clientId",
+      "value": "fintech-service",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "clientSecret",
+      "value": "super-secret-key",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "accountId",
+      "value": "acc_prod_001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "targetAccountId",
+      "value": "acc_prod_002",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "currency",
+      "value": "USD",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
 }
