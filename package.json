@@ -1,0 +1,52 @@
+{
+  "name": "k6-api-performance-suite",
+  "version": "1.0.0",
+  "description": "Production-grade, open-source-ready Performance & API Testing Suite using Grafana k6 and Newman",
+  "main": "src/scenarios/load-test.js",
+  "type": "module",
+  "scripts": {
+    "start:mock": "node src/mock/server.js",
+    "test:smoke": "k6 run tests/smoke-test.js",
+    "test:load": "k6 run tests/load-test.js",
+    "test:stress": "k6 run tests/stress-test.js",
+    "test:spike": "k6 run tests/spike-test.js",
+    "test:api": "newman run collections/fintech-api.collection.json -e environments/local.json --reporters cli,json --reporter-json-export reports/newman-results.json",
+    "test:api:staging": "newman run collections/fintech-api.collection.json -e environments/staging.json --reporters cli,json --reporter-json-export reports/newman-staging-results.json",
+    "test:api:html": "newman run collections/fintech-api.collection.json -e environments/local.json --reporters cli,htmlextra --reporter-htmlextra-export reports/newman-report.html",
+    "test:all": "npm run test:api && npm run test:smoke && npm run test:load",
+    "docker:build": "docker compose build",
+    "docker:smoke": "docker compose run --rm k6-smoke",
+    "docker:load": "docker compose run --rm k6-load",
+    "docker:stress": "docker compose run --rm k6-stress",
+    "docker:spike": "docker compose run --rm k6-spike",
+    "docker:newman": "docker compose run --rm newman"
+  },
+  "keywords": [
+    "k6",
+    "grafana-k6",
+    "performance-testing",
+    "load-testing",
+    "stress-testing",
+    "spike-testing",
+    "api-testing",
+    "newman",
+    "postman",
+    "qa-automation",
+    "sla-validation",
+    "devops",
+    "ci-cd"
+  ],
+  "author": "Senior Performance & QA Automation Architect",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

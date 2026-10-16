@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log
+reports/*.html
+reports/*.json
+!reports/.gitkeep
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+*.md
