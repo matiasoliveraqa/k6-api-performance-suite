@@ -160,7 +160,7 @@ Tests can execute against three target setups without changing test code:
 ### 1. Install Dependencies
 
 ```bash
-git clone https://github.com/your-org/k6-api-performance-suite.git
+git clone https://github.com/matiasoliveraqa/k6-api-performance-suite.git
 cd k6-api-performance-suite
 npm install
 ```
@@ -314,6 +314,14 @@ The repository includes a ready-to-use GitHub Actions workflow (`.github/workflo
 2. **Model Realistic Think Times**: Real users do not fire back-to-back requests in 0ms. Use `sleep(random)` pacing in `src/scenarios/transaction-flow.js` to simulate human/client delays.
 3. **Validate Idempotency Under Load**: Under high concurrency, race conditions can cause duplicate debits if idempotency locks are not atomic. The suite validates that replayed transactions maintain identical status and remaining balances.
 4. **Monitor Client Resource Saturation**: Ensure the machine generating the load is not CPU-throttled or starved of file descriptors (`ulimit -n 65535`).
+
+---
+
+## 👤 Author
+**Matías Olivera** — *Senior QA Engineer & SDET*  
+- **GitHub**: [@matiasoliveraqa](https://github.com/matiasoliveraqa)  
+- **LinkedIn**: [linkedin.com/in/matiolivera](https://www.linkedin.com/in/matiolivera/)  
+- **Email**: [matiluzardo3@gmail.com](mailto:matiluzardo3@gmail.com)
 
 ---
 
