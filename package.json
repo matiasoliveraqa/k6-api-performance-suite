@@ -36,7 +36,7 @@
     "devops",
     "ci-cd"
   ],
-  "author": "Senior Performance & QA Automation Architect",
+  "author": "Matías Olivera <matiluzardo3@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
     "cors": "^2.8.5",
