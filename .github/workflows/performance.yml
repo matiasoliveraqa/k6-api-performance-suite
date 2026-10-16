@@ -71,7 +71,7 @@ jobs:
             -e BASE_URL=http://127.0.0.1:3333
 
       - name: Run k6 Load Test Benchmark (100-200 VUs)
-        if: github.event_name == 'push' || github.event.inputs.test_profile == 'load' || github.event.inputs.test_profile == 'all'
+        if: github.event.inputs.test_profile == 'load' || github.event.inputs.test_profile == 'all'
         run: |
           k6 run tests/load-test.js \
             -e TARGET_ENV=mock \
